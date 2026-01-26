@@ -1,0 +1,22 @@
+{{define "footer"}}
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+  <tr>
+    <td style="padding:24px 40px;border-top:1px solid #eee;text-align:center;">
+      {{if .SocialLinks}}{{template "social" .}}{{end}}
+      {{if .CompanyName.Valid}}
+      <p style="margin:8px 0;color:#666;font-size:12px;">{{.CompanyName.Value}} &copy; {{.Year}}</p>
+      {{end}}
+      {{if .SupportEmail.Valid}}
+      <p style="margin:4px 0;color:#888;font-size:12px;">
+        Need help? <a href="mailto:{{.SupportEmail.Value}}" style="color:{{.PrimaryColor}};">{{.SupportEmail.Value}}</a>
+      </p>
+      {{end}}
+      {{if .SupportURL.Valid}}
+      <p style="margin:4px 0;color:#888;font-size:12px;">
+        <a href="{{.SupportURL.Value}}" style="color:{{.PrimaryColor}};">Visit our Help Center</a>
+      </p>
+      {{end}}
+    </td>
+  </tr>
+</table>
+{{end}}

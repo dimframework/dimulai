@@ -1,0 +1,190 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.25"
+          cache: true
+          cache-dependency-path: "**/go.sum"
+
+      - name: Run go fmt
+        run: |
+          cd dimulai
+          if [ "$(gofmt -s -l . | grep -v vendor | wc -l)" -gt 0 ]; then
+            echo "Go fmt issues found:"
+            gofmt -s -d .
+            exit 1
+          fi
+          echo "✅ Code formatting is correct"
+
+      - name: Run go vet
+        run: |
+          cd dimulai
+          go vet ./...
+          echo "✅ Static analysis passed"
+
+      - name: Run tests
+        run: cd dimulai && go test -v -race ./...
+
+  coverage:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: dimulai_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.25"
+          cache: true
+          cache-dependency-path: "**/go.sum"
+
+      - name: Create .env.test
+        run: |
+          cat > dimulai/.env.test << EOF
+          SERVER_PORT=8080
+          SERVER_READ_TIMEOUT=30s
+          SERVER_WRITE_TIMEOUT=30s
+          SERVER_IDLE_TIMEOUT=120s
+          SERVER_SHUTDOWN_TIMEOUT=10s
+
+          DB_WRITE_HOST=localhost
+          DB_READ_HOSTS=localhost
+          DB_PORT=5432
+          DB_NAME=dimulai_test
+          DB_USER=postgres
+          DB_PASSWORD=postgres
+          DB_MAX_CONNS=25
+          DB_SSL_MODE=disable
+
+          JWT_SECRET=test-secret-key-for-testing-purposes-only-256bit
+          JWT_ACCESS_TOKEN_EXPIRY=15m
+          JWT_REFRESH_TOKEN_EXPIRY=168h
+          JWT_SIGNING_METHOD=HS256
+
+          MAIL_FROM=test@example.com
+          MAIL_TRANSPORT=null
+          MAIL_APP_NAME=Dimulai Test
+          MAIL_PRIMARY_COLOR=#007bff
+
+          CORS_ALLOWED_ORIGINS=*
+          CORS_ALLOWED_METHODS=GET,POST,PUT,DELETE,OPTIONS
+          CORS_ALLOWED_HEADERS=Content-Type,Authorization
+          EOF
+
+      - name: Wait for PostgreSQL
+        run: |
+          until PGPASSWORD=postgres psql -h localhost -U postgres -d dimulai_test -c '\q'; do
+            echo 'Waiting for PostgreSQL...'
+            sleep 1
+          done
+        env:
+          PGPASSWORD: postgres
+
+      - name: Run tests with coverage
+        run: cd dimulai && go test -v -coverprofile=coverage.out -covermode=atomic ./...
+
+      - name: Generate coverage report
+        run: cd dimulai && go tool cover -func=coverage.out
+
+      - name: Check coverage threshold
+        run: |
+          cd dimulai
+          coverage=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
+          echo "Total coverage: ${coverage}%"
+          if (( $(echo "$coverage < 70" | bc -l) )); then
+            echo "❌ Coverage is below 70% threshold"
+            exit 1
+          fi
+          echo "✅ Coverage meets 70% threshold"
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./dimulai/coverage.out
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+
+      - name: Comment PR with coverage
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            try {
+              const coverage = fs.readFileSync('./dimulai/coverage.out', 'utf8');
+              const result = require('child_process').execSync('cd dimulai && go tool cover -func=coverage.out', { encoding: 'utf8' });
+              const comment = `## Code Coverage Report\n\`\`\`\n${result}\n\`\`\``;
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            } catch (e) {
+              console.log('Could not post coverage comment:', e.message);
+            }
+
+  lint-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.25"
+          cache: true
+          cache-dependency-path: "**/go.sum"
+
+      - name: Verify go.mod and go.sum
+        run: |
+          cd dimulai
+          go mod verify
+          go mod tidy
+          if [ -n "$(git diff --name-only)" ]; then
+            echo "❌ go.mod or go.sum needs updating"
+            git diff
+            exit 1
+          fi
+          echo "✅ go.mod and go.sum are clean"
+
+      - name: Check for unused dependencies
+        run: |
+          cd dimulai
+          go mod graph | grep -v ' ' | sort | uniq > /tmp/used.txt
+          go list -m all | tail -n +2 | awk '{print $1}' > /tmp/all.txt
+          echo "✅ Dependency check completed"

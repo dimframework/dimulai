@@ -1,0 +1,13 @@
+{{define "social"}}
+{{if .SocialLinks}}
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 auto 16px;">
+  <tr>
+    {{range .SocialLinks}}
+    <td style="padding:0 8px;">
+      <a href="{{.URL}}" style="color:#666;font-size:12px;text-decoration:none;">{{.Name}}</a>
+    </td>
+    {{end}}
+  </tr>
+</table>
+{{end}}
+{{end}}
