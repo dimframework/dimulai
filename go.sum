@@ -41,8 +41,8 @@ github.com/aws/smithy-go v1.23.1/go.mod h1:LEj2LM3rBRQJxPZTB4KuzZkaZYnZPnvgIhb4p
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/dimframework/dim v0.3.0 h1:q8dHlmv7LUak1mU/1hcbktURUXL0BSWYDkzv13MrlgQ=
-github.com/dimframework/dim v0.3.0/go.mod h1:pikKwUtypwnTz4UQ8Bf/+KKlSXaOs4TIaYC752IXT+0=
+github.com/dimframework/dim v0.4.0 h1:wM8xi6vvIhR7LW22MO2r0lpmEHbkMcws8GHdFxLfuDI=
+github.com/dimframework/dim v0.4.0/go.mod h1:pikKwUtypwnTz4UQ8Bf/+KKlSXaOs4TIaYC752IXT+0=
 github.com/golang-jwt/jwt/v5 v5.3.0 h1:pv4AsKCKKZuqlgs5sUmn4x8UlGa0kEVt/puTpKx9vvo=
 github.com/golang-jwt/jwt/v5 v5.3.0/go.mod h1:fxCRLWMO43lRc8nhHWY6LGqRcf+1gQWArsqaEUEa5bE=
 github.com/jackc/pgpassfile v1.0.0 h1:/6Hmqy13Ss2zCq62VdNG8tM1wchn8zjSGOBJ6icpsIM=

@@ -69,6 +69,9 @@ func (h *AppHandler) loadAuthHandler(v1 *dim.RouterGroup, userStore *DatabaseUse
 		return err
 	}
 
+	// Tambahkan logger untuk internal error logging
+	authService.WithLogger(h.logger)
+
 	// Initialize mailer and email service
 	mailer, err := dim.NewMailerFromConfig(&h.config.Email, os.Stdout)
 	if err != nil {
@@ -115,7 +118,8 @@ func (h *AppHandler) loadUserProfile(v1 *dim.RouterGroup, userStore *DatabaseUse
 	userHandler := NewUserHandler(userStore, h.logger)
 
 	// Protected Routes (Access Token Required & Checked against Blocklist)
-	v1.Get("/me", userHandler.Me, dim.RequireAuth(jwtManager, blocklist))
-	v1.Put("/me", userHandler.UpdateProfile, dim.RequireAuth(jwtManager, blocklist))
-	v1.Put("/me/password", userHandler.ChangePassword, dim.RequireAuth(jwtManager, blocklist))
+	// WithAuthLogger untuk logging internal errors (seperti token type mismatch)
+	v1.Get("/me", userHandler.Me, dim.RequireAuth(jwtManager, blocklist, dim.WithAuthLogger(h.logger)))
+	v1.Put("/me", userHandler.UpdateProfile, dim.RequireAuth(jwtManager, blocklist, dim.WithAuthLogger(h.logger)))
+	v1.Put("/me/password", userHandler.ChangePassword, dim.RequireAuth(jwtManager, blocklist, dim.WithAuthLogger(h.logger)))
 }
