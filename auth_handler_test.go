@@ -180,6 +180,111 @@ func TestAuthHandler_ForgotPassword(t *testing.T) {
 	})
 }
 
+func TestAuthHandler_RefreshTokenEndpoint(t *testing.T) {
+	router, _, testDB := SetupApp(t)
+	defer testDB.Cleanup()
+
+	// Seed User and login to get valid tokens
+	email := "refresh@example.com"
+	password := "password123"
+	user := SeedUser(t, testDB.DB, "Refresh User", email, password)
+
+	t.Run("RefreshToken_WithAccessToken_ShouldFail", func(t *testing.T) {
+		// Generate access token (typ: at+jwt)
+		accessToken := SeedAuth(t, user, &testDB.Config.JWT)
+
+		// Try to use access token on refresh endpoint - should fail
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/refresh-token", nil)
+		req.Header.Set("Authorization", "Bearer "+accessToken)
+		rec := httptest.NewRecorder()
+
+		router.ServeHTTP(rec, req)
+
+		// Should return 401 Unauthorized because access token cannot be used as refresh token
+		if rec.Code != http.StatusUnauthorized {
+			t.Errorf("Expected status 401 Unauthorized when using access token for refresh, got %d. Body: %s", rec.Code, rec.Body.String())
+		}
+	})
+
+	t.Run("RefreshToken_WithRefreshToken_ShouldSucceed", func(t *testing.T) {
+		// Login to get valid refresh token stored in database
+		payload := map[string]string{
+			"email":    email,
+			"password": password,
+		}
+		body, _ := json.Marshal(payload)
+
+		loginReq := httptest.NewRequest(http.MethodPost, "/api/v1/login", bytes.NewBuffer(body))
+		loginReq.Header.Set("Content-Type", "application/json")
+		loginRec := httptest.NewRecorder()
+
+		router.ServeHTTP(loginRec, loginReq)
+
+		if loginRec.Code != http.StatusOK {
+			t.Fatalf("Login failed: %d", loginRec.Code)
+		}
+
+		var loginResp dim.TokenResponse
+		if err := json.NewDecoder(loginRec.Body).Decode(&loginResp); err != nil {
+			t.Fatalf("Failed to decode login response: %v", err)
+		}
+
+		// Use valid refresh token - should succeed
+		refreshReq := httptest.NewRequest(http.MethodPost, "/api/v1/refresh-token", nil)
+		refreshReq.Header.Set("Authorization", "Bearer "+loginResp.RefreshToken)
+		refreshRec := httptest.NewRecorder()
+
+		router.ServeHTTP(refreshRec, refreshReq)
+
+		if refreshRec.Code != http.StatusOK {
+			t.Errorf("Expected status 200 OK when using valid refresh token, got %d. Body: %s", refreshRec.Code, refreshRec.Body.String())
+		}
+	})
+}
+
+func TestAuthHandler_ProtectedEndpoint_TokenTypeValidation(t *testing.T) {
+	router, _, testDB := SetupApp(t)
+	defer testDB.Cleanup()
+
+	// Seed User
+	email := "tokentype@example.com"
+	password := "password123"
+	user := SeedUser(t, testDB.DB, "Token Type User", email, password)
+
+	t.Run("MeEndpoint_WithRefreshToken_ShouldFail", func(t *testing.T) {
+		// Generate refresh token (typ: rt+jwt)
+		refreshToken := SeedRefreshToken(t, user, &testDB.Config.JWT)
+
+		// Try to use refresh token on protected endpoint - should fail
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/me", nil)
+		req.Header.Set("Authorization", "Bearer "+refreshToken)
+		rec := httptest.NewRecorder()
+
+		router.ServeHTTP(rec, req)
+
+		// Should return 401 Unauthorized because refresh token cannot be used as access token
+		if rec.Code != http.StatusUnauthorized {
+			t.Errorf("Expected status 401 Unauthorized when using refresh token for /me, got %d. Body: %s", rec.Code, rec.Body.String())
+		}
+	})
+
+	t.Run("MeEndpoint_WithAccessToken_ShouldSucceed", func(t *testing.T) {
+		// Generate access token (typ: at+jwt)
+		accessToken := SeedAuth(t, user, &testDB.Config.JWT)
+
+		// Use access token on protected endpoint - should succeed
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/me", nil)
+		req.Header.Set("Authorization", "Bearer "+accessToken)
+		rec := httptest.NewRecorder()
+
+		router.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Errorf("Expected status 200 OK when using access token for /me, got %d. Body: %s", rec.Code, rec.Body.String())
+		}
+	})
+}
+
 func TestAuthHandler_ResetPassword(t *testing.T) {
 	router, _, testDB := SetupApp(t) // Need handler to access services
 	defer testDB.Cleanup()
