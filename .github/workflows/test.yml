@@ -88,7 +88,7 @@ jobs:
         run: cd dimulai && go tool cover -func=coverage.out
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
         with:
           files: ./dimulai/coverage.out
           flags: unittests
