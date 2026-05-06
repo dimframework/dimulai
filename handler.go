@@ -8,12 +8,10 @@ import (
 )
 
 type AppHandler struct {
-	db        dim.Database
-	config    *dim.Config
-	router    *dim.Router
-	jwtm      *dim.JWTManager
-	blocklist *dim.DatabaseBlocklist
-	logger    *dim.Logger
+	db     dim.Database
+	config *dim.Config
+	router *dim.Router
+	logger *dim.Logger
 }
 
 func NewAppHandler(db dim.Database, config *dim.Config, router *dim.Router, logger *dim.Logger) *AppHandler {
@@ -33,7 +31,7 @@ func (h *AppHandler) LoadRouters() error {
 	// Shared dependencies
 	userStore := NewDatabaseUserStore(h.db)
 	blocklist := dim.NewDatabaseBlocklist(h.db)
-	jwtManager, err := dim.NewJWTManager(&h.config.JWT)
+	tokenManager, err := dim.NewJWTManager(&h.config.JWT)
 	if err != nil {
 		h.logger.Error("Failed to init JWT Manager", "error", err)
 		return err
@@ -46,7 +44,7 @@ func (h *AppHandler) LoadRouters() error {
 	if err := h.loadAuthHandler(v1, userStore, blocklist); err != nil {
 		return err
 	}
-	h.loadUserProfile(v1, userStore, jwtManager, blocklist)
+	h.loadUserProfile(v1, userStore, tokenManager, blocklist)
 
 	h.router.Build()
 
@@ -114,12 +112,12 @@ func (h *AppHandler) loadAuthHandler(v1 *dim.RouterGroup, userStore *DatabaseUse
 	return nil
 }
 
-func (h *AppHandler) loadUserProfile(v1 *dim.RouterGroup, userStore *DatabaseUserStore, jwtManager *dim.JWTManager, blocklist dim.TokenBlocklist) {
+func (h *AppHandler) loadUserProfile(v1 *dim.RouterGroup, userStore *DatabaseUserStore, tokenManager dim.TokenManager, blocklist dim.TokenBlocklist) {
 	userHandler := NewUserHandler(userStore, h.logger)
 
 	// Protected Routes (Access Token Required & Checked against Blocklist)
 	// WithAuthLogger untuk logging internal errors (seperti token type mismatch)
-	v1.Get("/me", userHandler.Me, dim.RequireAuth(jwtManager, blocklist, dim.WithAuthLogger(h.logger)))
-	v1.Put("/me", userHandler.UpdateProfile, dim.RequireAuth(jwtManager, blocklist, dim.WithAuthLogger(h.logger)))
-	v1.Put("/me/password", userHandler.ChangePassword, dim.RequireAuth(jwtManager, blocklist, dim.WithAuthLogger(h.logger)))
+	v1.Get("/me", userHandler.Me, dim.RequireAuth(tokenManager, blocklist, dim.WithAuthLogger(h.logger)))
+	v1.Put("/me", userHandler.UpdateProfile, dim.RequireAuth(tokenManager, blocklist, dim.WithAuthLogger(h.logger)))
+	v1.Put("/me/password", userHandler.ChangePassword, dim.RequireAuth(tokenManager, blocklist, dim.WithAuthLogger(h.logger)))
 }

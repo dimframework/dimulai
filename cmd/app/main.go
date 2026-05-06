@@ -47,6 +47,13 @@ func main() {
 	// 7. Initialize and Run Console Commands
 	console := dim.NewConsole(db, router, cfg)
 	console.RegisterBuiltInCommands()
+
+	// Use dedicated migration connection if configured; falls back to write connection.
+	if migrationDB, err := dim.NewMigrationDatabase(cfg.Database); err == nil {
+		console.WithMigrationDB(migrationDB)
+		defer migrationDB.Close()
+	}
+
 	if err := console.Run(os.Args[1:]); err != nil {
 		logger.Error("Command execution failed", "error", err)
 		os.Exit(1)
