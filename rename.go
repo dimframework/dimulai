@@ -153,9 +153,13 @@ func replaceInFile(path, oldMod, newMod, oldPkg, newPkg string) (bool, error) {
 	//      "github.com/dimframework/dimulai/migrations" → "github.com/myorg/myapp/migrations"
 	dst = strings.ReplaceAll(dst, oldMod, newMod)
 
-	// 2. Replace package declaration in .go files (skip go.mod).
+	// 2. Replace package declaration and qualifier in .go files (skip go.mod).
 	if strings.HasSuffix(path, ".go") && oldPkg != newPkg {
 		dst = replacePkgDecl(dst, oldPkg, newPkg)
+
+		// 3. Replace package qualifier in code: dimulai.Foo → newpkg.Foo
+		//    The dot suffix prevents replacing identifiers that merely start with oldPkg.
+		dst = strings.ReplaceAll(dst, oldPkg+".", newPkg+".")
 	}
 
 	if dst == src {
