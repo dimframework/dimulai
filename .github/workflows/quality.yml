@@ -23,7 +23,6 @@ jobs:
 
       - name: Run go fmt
         run: |
-          cd dimulai
           if [ "$(gofmt -s -l . | grep -v vendor | wc -l)" -gt 0 ]; then
             echo "Go fmt issues found:"
             gofmt -s -d .
@@ -33,12 +32,11 @@ jobs:
 
       - name: Run go vet
         run: |
-          cd dimulai
           go vet ./...
           echo "✅ Static analysis passed"
 
       - name: Run tests
-        run: cd dimulai && go test -v -race ./...
+        run: go test -v -race ./...
 
   coverage:
     runs-on: ubuntu-latest
@@ -71,7 +69,7 @@ jobs:
 
       - name: Create .env.test
         run: |
-          cat > dimulai/.env.test << EOF
+          cat > .env.test << EOF
           SERVER_PORT=8080
           SERVER_READ_TIMEOUT=30s
           SERVER_WRITE_TIMEOUT=30s
@@ -112,14 +110,13 @@ jobs:
           PGPASSWORD: postgres
 
       - name: Run tests with coverage
-        run: cd dimulai && go test -v -coverprofile=coverage.out -covermode=atomic ./...
+        run: go test -v -coverprofile=coverage.out -covermode=atomic ./...
 
       - name: Generate coverage report
-        run: cd dimulai && go tool cover -func=coverage.out
+        run: go tool cover -func=coverage.out
 
       - name: Check coverage threshold
         run: |
-          cd dimulai
           coverage=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
           echo "Total coverage: ${coverage}%"
           if (( $(echo "$coverage < 70" | bc -l) )); then
@@ -131,7 +128,7 @@ jobs:
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
-          files: ./dimulai/coverage.out
+          files: ./coverage.out
           flags: unittests
           name: codecov-umbrella
           fail_ci_if_error: false
@@ -143,8 +140,8 @@ jobs:
           script: |
             const fs = require('fs');
             try {
-              const coverage = fs.readFileSync('./dimulai/coverage.out', 'utf8');
-              const result = require('child_process').execSync('cd dimulai && go tool cover -func=coverage.out', { encoding: 'utf8' });
+              const coverage = fs.readFileSync('./coverage.out', 'utf8');
+              const result = require('child_process').execSync('go tool cover -func=coverage.out', { encoding: 'utf8' });
               const comment = `## Code Coverage Report\n\`\`\`\n${result}\n\`\`\``;
               github.rest.issues.createComment({
                 issue_number: context.issue.number,
@@ -172,7 +169,6 @@ jobs:
 
       - name: Verify go.mod and go.sum
         run: |
-          cd dimulai
           go mod verify
           go mod tidy
           if [ -n "$(git diff --name-only)" ]; then
@@ -184,7 +180,6 @@ jobs:
 
       - name: Check for unused dependencies
         run: |
-          cd dimulai
           go mod graph | grep -v ' ' | sort | uniq > /tmp/used.txt
           go list -m all | tail -n +2 | awk '{print $1}' > /tmp/all.txt
           echo "✅ Dependency check completed"

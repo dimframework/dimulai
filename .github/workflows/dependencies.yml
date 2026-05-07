@@ -28,25 +28,20 @@ jobs:
           cache-dependency-path: "**/go.sum"
 
       - name: Download dependencies
-        run: |
-          cd dimulai
-          go mod download
+        run: go mod download
 
       - name: Check for outdated dependencies
         run: |
-          cd dimulai
           echo "=== Checking for available updates ==="
           go list -u -m all
 
       - name: Verify go.mod and go.sum integrity
         run: |
-          cd dimulai
           go mod verify
           echo "✅ go.mod and go.sum are valid"
 
       - name: Tidy go.mod
         run: |
-          cd dimulai
           go mod tidy
           if [ -n "$(git diff --name-only)" ]; then
             echo "❌ go.mod or go.sum needs updating"
@@ -57,13 +52,11 @@ jobs:
 
       - name: Check for unused dependencies
         run: |
-          cd dimulai
           go mod graph | grep -v ' ' | sort | uniq
           echo "✅ Dependency check completed"
 
       - name: Verify all packages can be imported
         run: |
-          cd dimulai
           go test -run=^$ ./...
           echo "✅ All packages are importable"
 
@@ -83,13 +76,11 @@ jobs:
 
       - name: Run go vet for potential security issues
         run: |
-          cd dimulai
           go vet ./...
           echo "✅ Static analysis for security completed"
 
       - name: Check for obvious security patterns
         run: |
-          cd dimulai
           echo "=== Checking for common security issues ==="
           ! grep -r "hardcoded.*password\|hardcoded.*secret\|hardcoded.*token" --include="*.go" . 2>/dev/null || echo "⚠️  Review hardcoded credentials"
           echo "✅ Security pattern check completed"

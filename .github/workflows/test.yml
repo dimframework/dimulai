@@ -38,7 +38,7 @@ jobs:
 
       - name: Create .env.test
         run: |
-          cat > dimulai/.env.test << EOF
+          cat > .env.test << EOF
           SERVER_PORT=8080
           SERVER_READ_TIMEOUT=30s
           SERVER_WRITE_TIMEOUT=30s
@@ -79,25 +79,24 @@ jobs:
           PGPASSWORD: postgres
 
       - name: Download dependencies
-        run: cd dimulai && go mod download
+        run: go mod download
 
       - name: Run tests with race detection
-        run: cd dimulai && go test -v -race -coverprofile=coverage.out ./...
+        run: go test -v -race -coverprofile=coverage.out ./...
 
       - name: Generate coverage report
-        run: cd dimulai && go tool cover -func=coverage.out
+        run: go tool cover -func=coverage.out
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
-          files: ./dimulai/coverage.out
+          files: ./coverage.out
           flags: unittests
           name: codecov-umbrella
           fail_ci_if_error: false
 
       - name: Verify code formatting
         run: |
-          cd dimulai
           if [ "$(gofmt -s -l . | grep -v vendor | wc -l)" -gt 0 ]; then
             echo "❌ Code formatting issues found:"
             gofmt -s -d .
@@ -107,13 +106,12 @@ jobs:
 
       - name: Run go vet analysis
         run: |
-          cd dimulai
           go vet ./...
           echo "✅ Static analysis passed"
 
       - name: Build application
         run: |
-          cd dimulai/cmd/app
+          cd cmd/app
           go build -v -o dimulai .
           if [ ! -f dimulai ]; then
             echo "❌ Build failed: dimulai binary not found"
