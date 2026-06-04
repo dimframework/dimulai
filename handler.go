@@ -9,12 +9,12 @@ import (
 
 type AppHandler struct {
 	db     dim.Database
-	config *dim.Config
+	config *AppConfig
 	router *dim.Router
 	logger *dim.Logger
 }
 
-func NewAppHandler(db dim.Database, config *dim.Config, router *dim.Router, logger *dim.Logger) *AppHandler {
+func NewAppHandler(db dim.Database, config *AppConfig, router *dim.Router, logger *dim.Logger) *AppHandler {
 	return &AppHandler{
 		db:     db,
 		config: config,

@@ -21,7 +21,7 @@ func main() {
 	}
 
 	// 3. Load Configuration
-	cfg, err := dim.LoadConfig()
+	cfg, err := dimulai.LoadAppConfig()
 	if err != nil {
 		logger.Error("Failed to load configuration", "error", err)
 		os.Exit(1)
@@ -45,7 +45,7 @@ func main() {
 	}
 
 	// 7. Initialize and Run Console Commands
-	console := dim.NewConsole(db, router, cfg)
+	console := dim.NewConsole(db, router, &cfg.Config)
 	console.RegisterBuiltInCommands()
 
 	// Use dedicated migration connection if configured; falls back to write connection.

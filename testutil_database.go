@@ -15,7 +15,7 @@ import (
 // TestDB holds the database connection and config for testing
 type TestDB struct {
 	DB      *dim.PostgresDatabase
-	Config  *dim.Config
+	Config  *AppConfig
 	cleanup func()
 }
 
@@ -35,7 +35,7 @@ func SetupIsolatedSchemaTest(t *testing.T) *TestDB {
 		fmt.Println("⚠ Warning: .env.test not found. Using system environment variables.")
 	}
 
-	cfg, err := dim.LoadConfig()
+	cfg, err := LoadAppConfig()
 	if err != nil {
 		t.Fatalf("Failed to load config: %v", err)
 	}
@@ -98,7 +98,7 @@ func SetupIsolatedSchemaTest(t *testing.T) *TestDB {
 }
 
 // cleanupSchema removes the isolated schema using a fresh connection
-func cleanupSchema(cfg *dim.Config, schema string) {
+func cleanupSchema(cfg *AppConfig, schema string) {
 	dropDB, err := dim.NewPostgresDatabase(cfg.Database)
 	if err != nil {
 		// Log error but don't fail, we are in cleanup

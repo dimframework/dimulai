@@ -4,7 +4,7 @@ go 1.25.4
 
 require (
 	github.com/atfromhome/goreus v1.2.0
-	github.com/dimframework/dim v0.6.0
+	github.com/dimframework/dim v0.6.1
 )
 
 require (

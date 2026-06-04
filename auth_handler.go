@@ -11,7 +11,7 @@ import (
 
 // AuthHandler handles authentication requests
 type AuthHandler struct {
-	cfg          *dim.Config
+	cfg          *AppConfig
 	logger       *dim.Logger
 	authService  *dim.AuthService
 	userStore    *DatabaseUserStore
@@ -19,7 +19,7 @@ type AuthHandler struct {
 }
 
 // NewAuthHandler creates a new AuthHandler
-func NewAuthHandler(cfg *dim.Config, logger *dim.Logger, authService *dim.AuthService, userStore *DatabaseUserStore, emailService *EmailService) *AuthHandler {
+func NewAuthHandler(cfg *AppConfig, logger *dim.Logger, authService *dim.AuthService, userStore *DatabaseUserStore, emailService *EmailService) *AuthHandler {
 	return &AuthHandler{
 		cfg:          cfg,
 		logger:       logger,
@@ -65,7 +65,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	// Check if user exists
 	exists, err := h.userStore.Exists(r.Context(), req.Email)
 	if err != nil {
-		h.logger.Error("Failed to check user existence: %v", err)
+		h.logger.Error("Failed to check user existence", "error", err)
 		dim.InternalServerError(w, "Failed to check user existence")
 		return
 	}
@@ -79,7 +79,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	// Hash password
 	hashedPassword, err := dim.HashPassword(req.Password)
 	if err != nil {
-		h.logger.Error("Failed to hash password: %v", err)
+		h.logger.Error("Failed to hash password", "error", err)
 		dim.InternalServerError(w, "Failed to hash password")
 		return
 	}
@@ -92,7 +92,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.userStore.Create(r.Context(), user); err != nil {
-		h.logger.Error("Failed to create user: %v", err)
+		h.logger.Error("Failed to create user", "error", err)
 		dim.InternalServerError(w, "Failed to create user")
 		return
 	}
