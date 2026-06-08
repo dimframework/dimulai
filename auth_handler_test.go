@@ -333,6 +333,66 @@ func TestAuthHandler_Logout(t *testing.T) {
 	})
 }
 
+func TestAuthHandler_Register_InvalidBody(t *testing.T) {
+	router, _, testDB := SetupApp(t)
+	defer testDB.Cleanup()
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/register", bytes.NewBufferString("{invalid}"))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("Expected 400, got %d", rec.Code)
+	}
+}
+
+func TestAuthHandler_Login_InvalidBody(t *testing.T) {
+	router, _, testDB := SetupApp(t)
+	defer testDB.Cleanup()
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/login", bytes.NewBufferString("{invalid}"))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("Expected 400, got %d", rec.Code)
+	}
+}
+
+func TestAuthHandler_ResetPassword_InvalidBody(t *testing.T) {
+	router, _, testDB := SetupApp(t)
+	defer testDB.Cleanup()
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/reset-password", bytes.NewBufferString("{invalid}"))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("Expected 400, got %d", rec.Code)
+	}
+}
+
+func TestAuthHandler_ForgotPassword_InvalidBody(t *testing.T) {
+	router, _, testDB := SetupApp(t)
+	defer testDB.Cleanup()
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/forgot-password", bytes.NewBufferString("{invalid}"))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("Expected 400, got %d", rec.Code)
+	}
+}
+
 func TestAuthHandler_ResetPassword(t *testing.T) {
 	router, _, testDB := SetupApp(t) // Need handler to access services
 	defer testDB.Cleanup()

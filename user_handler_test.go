@@ -244,6 +244,84 @@ func TestUserHandler_UpdateProfile(t *testing.T) {
 	})
 }
 
+func TestUserHandler_ChangePassword_Validation(t *testing.T) {
+	router, _, testDB := SetupApp(t)
+	defer testDB.Cleanup()
+
+	password := "OldPassword123!"
+	user := SeedUser(t, testDB.DB, "Val User", "val@example.com", password)
+	token := SeedAuth(t, user, &testDB.Config.JWT)
+
+	t.Run("InvalidBody", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPut, "/api/v1/me/password", bytes.NewBufferString("{invalid}"))
+		req.Header.Set("Authorization", "Bearer "+token)
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+
+		router.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("Expected 400, got %d", rec.Code)
+		}
+	})
+
+	t.Run("ValidationFailure_ShortPassword", func(t *testing.T) {
+		payload := map[string]string{
+			"old_password": password,
+			"new_password": "123",
+		}
+		body, _ := json.Marshal(payload)
+
+		req := httptest.NewRequest(http.MethodPut, "/api/v1/me/password", bytes.NewBuffer(body))
+		req.Header.Set("Authorization", "Bearer "+token)
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+
+		router.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("Expected 400, got %d", rec.Code)
+		}
+	})
+}
+
+func TestUserHandler_UpdateProfile_Validation(t *testing.T) {
+	router, _, testDB := SetupApp(t)
+	defer testDB.Cleanup()
+
+	user := SeedUser(t, testDB.DB, "Upd User", "upd@example.com", "password")
+	token := SeedAuth(t, user, &testDB.Config.JWT)
+
+	t.Run("InvalidBody", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPut, "/api/v1/me", bytes.NewBufferString("{invalid}"))
+		req.Header.Set("Authorization", "Bearer "+token)
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+
+		router.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("Expected 400, got %d", rec.Code)
+		}
+	})
+
+	t.Run("EmptyEmail", func(t *testing.T) {
+		// Send JSON with explicit null email to trigger the empty-value check
+		body := []byte(`{"email":""}`)
+		req := httptest.NewRequest(http.MethodPut, "/api/v1/me", bytes.NewBuffer(body))
+		req.Header.Set("Authorization", "Bearer "+token)
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+
+		router.ServeHTTP(rec, req)
+
+		// Present+Valid+empty → 400
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("Expected 400, got %d. Body: %s", rec.Code, rec.Body.String())
+		}
+	})
+}
+
 func TestTokenClaimsVerification(t *testing.T) {
 	testDB := SetupIntegrationTest(t)
 	defer testDB.Cleanup()

@@ -148,6 +148,26 @@ func TestMockUserStore(t *testing.T) {
 		}
 	})
 
+	t.Run("UpdatePartial with password", func(t *testing.T) {
+		store := NewMockUserStore()
+		user := &User{Name: "Grace", Email: "grace@example.com", Password: "oldhash"}
+		store.Create(ctx, user)
+
+		req := &UpdateUserRequest{}
+		req.Password.Present = true
+		req.Password.Valid = true
+		req.Password.Value = "newpassword123"
+
+		if err := store.UpdatePartial(ctx, user.ID, req); err != nil {
+			t.Fatalf("UpdatePartial with password failed: %v", err)
+		}
+
+		found, _ := store.FindByID(ctx, user.ID)
+		if found.Password == "oldhash" {
+			t.Error("Expected password to be updated (hashed)")
+		}
+	})
+
 	t.Run("UpdatePartial not found", func(t *testing.T) {
 		store := NewMockUserStore()
 		req := &UpdateUserRequest{}
