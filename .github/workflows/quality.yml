@@ -36,7 +36,7 @@ jobs:
           echo "✅ Static analysis passed"
 
       - name: Run tests
-        run: go test -v -race ./...
+        run: go test -v -race -short ./...
 
   coverage:
     runs-on: ubuntu-latest

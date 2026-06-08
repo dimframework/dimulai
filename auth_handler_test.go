@@ -285,6 +285,54 @@ func TestAuthHandler_ProtectedEndpoint_TokenTypeValidation(t *testing.T) {
 	})
 }
 
+func TestAuthHandler_Logout(t *testing.T) {
+	router, _, testDB := SetupApp(t)
+	defer testDB.Cleanup()
+
+	email := "logout@example.com"
+	password := "password123"
+	SeedUser(t, testDB.DB, "Logout User", email, password)
+
+	// Login to get a valid refresh token
+	loginPayload := map[string]string{"email": email, "password": password}
+	loginBody, _ := json.Marshal(loginPayload)
+	loginReq := httptest.NewRequest(http.MethodPost, "/api/v1/login", bytes.NewBuffer(loginBody))
+	loginReq.Header.Set("Content-Type", "application/json")
+	loginRec := httptest.NewRecorder()
+	router.ServeHTTP(loginRec, loginReq)
+	if loginRec.Code != http.StatusOK {
+		t.Fatalf("Login failed: %d", loginRec.Code)
+	}
+	var loginResp dim.TokenResponse
+	if err := json.NewDecoder(loginRec.Body).Decode(&loginResp); err != nil {
+		t.Fatalf("Failed to decode login response: %v", err)
+	}
+
+	t.Run("Success", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/logout", nil)
+		req.Header.Set("Authorization", "Bearer "+loginResp.RefreshToken)
+		rec := httptest.NewRecorder()
+
+		router.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Errorf("Expected status 200 OK, got %d. Body: %s", rec.Code, rec.Body.String())
+		}
+	})
+
+	t.Run("MissingToken", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/logout", nil)
+		// ExpectBearerToken middleware returns 401 before handler runs
+		rec := httptest.NewRecorder()
+
+		router.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusUnauthorized {
+			t.Errorf("Expected status 401 Unauthorized, got %d", rec.Code)
+		}
+	})
+}
+
 func TestAuthHandler_ResetPassword(t *testing.T) {
 	router, _, testDB := SetupApp(t) // Need handler to access services
 	defer testDB.Cleanup()
