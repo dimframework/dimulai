@@ -1,7 +1,6 @@
 package dimulai
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/dimframework/dim"
@@ -23,22 +22,22 @@ func NewUserHandler(userStore *DatabaseUserStore, logger *dim.Logger) *UserHandl
 
 // Me handles the current user profile request
 func (h *UserHandler) Me(w http.ResponseWriter, r *http.Request) {
-	// Get user from context (set by RequireAuth middleware)
-	authUser, ok := dim.GetUser(r)
+	c := dim.Of(w, r)
+
+	authUser, ok := c.User()
 	if !ok {
-		dim.Unauthorized(w, "Unauthorized")
+		c.Unauthorized("Unauthorized")
 		return
 	}
 
-	// Fetch full user profile from database
 	user, err := h.userStore.FindByID(r.Context(), authUser.GetID())
 	if err != nil {
 		h.logger.Error("Failed to find user by ID", "error", err, "id", authUser.GetID())
-		dim.NotFound(w, "User not found")
+		c.NotFound("User not found")
 		return
 	}
 
-	dim.OK(w, user)
+	c.OK(user)
 }
 
 // ChangePasswordRequest represents the change password payload
@@ -49,64 +48,62 @@ type ChangePasswordRequest struct {
 
 // ChangePassword handles password change for authenticated user
 func (h *UserHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
-	authUser, ok := dim.GetUser(r)
+	c := dim.Of(w, r)
+
+	authUser, ok := c.User()
 	if !ok {
-		dim.Unauthorized(w, "Unauthorized")
+		c.Unauthorized("Unauthorized")
 		return
 	}
 
 	var req ChangePasswordRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		dim.BadRequest(w, "Invalid request body", nil)
+	if err := c.Bind(&req); err != nil {
+		c.BadRequest("Invalid request body", nil)
 		return
 	}
 
-	v := dim.NewValidator().
+	v := c.Validate().
 		Required("old_password", req.OldPassword).
 		Required("new_password", req.NewPassword).
 		MinLength("new_password", req.NewPassword, 6)
 
 	if !v.IsValid() {
-		dim.BadRequest(w, "Validation failed", v.ErrorMap())
+		c.BadRequest("Validation failed", v.ErrorMap())
 		return
 	}
 
-	// Get full user to verify old password
 	user, err := h.userStore.FindByID(r.Context(), authUser.GetID())
 	if err != nil {
-		dim.NotFound(w, "User not found")
+		c.NotFound("User not found")
 		return
 	}
 
 	if err := dim.VerifyPassword(user.GetPassword(), req.OldPassword); err != nil {
-		dim.Unauthorized(w, "Kata sandi lama salah")
+		c.Unauthorized("Kata sandi lama salah")
 		return
 	}
 
-	// Hash new password
 	hashedPassword, err := dim.HashPassword(req.NewPassword)
 	if err != nil {
 		h.logger.Error("Failed to hash password", "error", err)
-		dim.InternalServerError(w, "Failed to process password")
+		c.InternalServerError("Failed to process password")
 		return
 	}
 
-	// Update password
-	// We use type assertion to access fields of struct User
 	userStruct, ok := user.(*User)
 	if !ok {
-		dim.InternalServerError(w, "Invalid user type")
+		c.InternalServerError("Invalid user type")
 		return
 	}
 
 	userStruct.Password = hashedPassword
 	if err := h.userStore.Update(r.Context(), userStruct); err != nil {
 		h.logger.Error("Failed to update password", "error", err)
-		dim.InternalServerError(w, "Failed to update password")
+		c.InternalServerError("Failed to update password")
 		return
 	}
 
-	dim.OK(w, map[string]string{"message": "Password changed successfully"})
+	c.OK(map[string]string{"message": "Password changed successfully"})
 }
 
 // UpdateProfileInput represents the profile update payload
@@ -117,45 +114,39 @@ type UpdateProfileInput struct {
 
 // UpdateProfile handles profile update for authenticated user
 func (h *UserHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
-	authUser, ok := dim.GetUser(r)
+	c := dim.Of(w, r)
+
+	authUser, ok := c.User()
 	if !ok {
-		dim.Unauthorized(w, "Unauthorized")
+		c.Unauthorized("Unauthorized")
 		return
 	}
 
 	var req UpdateProfileInput
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		dim.BadRequest(w, "Invalid request body", nil)
+	if err := c.Bind(&req); err != nil {
+		c.BadRequest("Invalid request body", nil)
 		return
 	}
 
-	// Validate (check email unique if changed)
 	if req.Email.Present && req.Email.Valid {
 		if req.Email.Value == "" {
-			dim.BadRequest(w, "Email cannot be empty", nil)
+			c.BadRequest("Email cannot be empty", nil)
 			return
 		}
-		// Check uniqueness
 		exists, err := h.userStore.Exists(r.Context(), req.Email.Value)
 		if err != nil {
-			dim.InternalServerError(w, "Failed to check email")
+			c.InternalServerError("Failed to check email")
 			return
 		}
-		// If exists and not belonging to current user
-		// We need to check if the existing email belongs to someone else.
-		// Exists() returns true if ANY user has it.
-		// If the user submits their own email, Exists returns true.
 		if exists {
-			// Get user by email to check ID
 			existingUser, err := h.userStore.FindByEmail(r.Context(), req.Email.Value)
 			if err == nil && existingUser.GetID() != authUser.GetID() {
-				dim.Conflict(w, "Email already taken", map[string]string{"email": "Email already taken"})
+				c.Conflict("Email already taken", map[string]string{"email": "Email already taken"})
 				return
 			}
 		}
 	}
 
-	// Map to UpdateUserRequest
 	updateReq := &UpdateUserRequest{
 		Email: req.Email,
 		Name:  req.Name,
@@ -163,16 +154,15 @@ func (h *UserHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.userStore.UpdatePartial(r.Context(), authUser.GetID(), updateReq); err != nil {
 		h.logger.Error("Failed to update profile", "error", err)
-		dim.InternalServerError(w, "Failed to update profile")
+		c.InternalServerError("Failed to update profile")
 		return
 	}
 
-	// Fetch updated user to return
 	updatedUser, err := h.userStore.FindByID(r.Context(), authUser.GetID())
 	if err != nil {
-		dim.InternalServerError(w, "Failed to fetch updated profile")
+		c.InternalServerError("Failed to fetch updated profile")
 		return
 	}
 
-	dim.OK(w, updatedUser)
+	c.OK(updatedUser)
 }
