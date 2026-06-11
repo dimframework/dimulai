@@ -141,7 +141,7 @@ func (h *UserHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		if exists {
 			existingUser, err := h.userStore.FindByEmail(r.Context(), req.Email.Value)
 			if err == nil && existingUser.GetID() != authUser.GetID() {
-				c.Conflict("Email already taken", map[string]string{"email": "Email already taken"})
+				c.Conflict("Email already taken", dim.FieldErrors{"email": "Email already taken"})
 				return
 			}
 		}

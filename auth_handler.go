@@ -70,7 +70,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if exists {
-		c.Conflict("Email sudah terdaftar", map[string]string{
+		c.Conflict("Email sudah terdaftar", dim.FieldErrors{
 			"email": "Email sudah terdaftar",
 		})
 		return
