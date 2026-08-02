@@ -25,6 +25,10 @@ func NewAppHandler(db dim.Database, config *AppConfig, router *dim.Router, logge
 
 func (h *AppHandler) LoadRouters() error {
 	// Global Middleware
+	// ClientIP dipasang paling awal agar rate limiting membaca IP klien yang benar.
+	// Default TRUSTED_PROXY_COUNT=0 berarti RemoteAddr — aman untuk aplikasi yang
+	// terjangkau langsung. Setel ke jumlah hop proxy bila di belakang load balancer.
+	h.router.Use(dim.ClientIP(h.config.ClientIP))
 	h.router.Use(dim.LoggerMiddleware(h.logger))
 	h.router.Use(dim.Recovery(h.logger))
 

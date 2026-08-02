@@ -36,6 +36,27 @@ Periksa `.env` untuk opsi konfigurasi yang tersedia:
 - `SERVER_*`: Port server dan timeout.
 - `MAIL_*`: Konfigurasi layanan email (SMTP/SES) dan branding.
 - `RATE_LIMIT_*`: Pengaturan API rate limiting.
+- `TRUSTED_PROXY_COUNT`: Jumlah hop proxy tepercaya di depan aplikasi.
+
+#### Deployment di belakang proxy
+
+Rate limit per IP hanya sekuat cara IP klien ditentukan. Secara default aplikasi
+memakai `RemoteAddr` dan mengabaikan seluruh header proxy — benar untuk aplikasi
+yang terjangkau langsung.
+
+Bila di-deploy di belakang load balancer (Cloud Run, nginx, dll), setel jumlah
+hop-nya agar rate limit dihitung per klien, bukan per proxy:
+
+```bash
+TRUSTED_PROXY_COUNT=1
+```
+
+Middleware `dim.ClientIP` sudah terpasang di `handler.go`, jadi tidak ada
+perubahan kode yang diperlukan.
+
+> ⚠️ `TRUSTED_PROXY_COUNT > 0` mengandaikan aplikasi **tidak dapat dihubungi
+> langsung**. Bila origin masih terjangkau langsung, klien dapat memalsukan
+> `X-Forwarded-For` dan melewati rate limit.
 
 ### Menjalankan Aplikasi
 
