@@ -43,6 +43,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/dimframework/dim v0.10.0 h1:Pjp2wnMOH8KGjW99tTb/huaWRmxZPz/eS7YQKBWl3rw=
 github.com/dimframework/dim v0.10.0/go.mod h1:M4QH3/uyQcfXs3ecTw8/tS9NvPio9qpDCZcgnQlJhgU=
+github.com/dimframework/dim v0.11.0 h1:eF3vn1q00zTJsISFKx4Cu6ADSdOUHpklJk/V0hG0tco=
+github.com/dimframework/dim v0.11.0/go.mod h1:M4QH3/uyQcfXs3ecTw8/tS9NvPio9qpDCZcgnQlJhgU=
 github.com/dustin/go-humanize v1.0.1 h1:GzkhY7T5VNhEkwH0PVJgjz+fX1rhBrR7pRT3mDkpeCY=
 github.com/dustin/go-humanize v1.0.1/go.mod h1:Mu1zIs6XwVuF/gI1OepvI0qD18qycQx+mFykh5fBlto=
 github.com/golang-jwt/jwt/v5 v5.3.0 h1:pv4AsKCKKZuqlgs5sUmn4x8UlGa0kEVt/puTpKx9vvo=

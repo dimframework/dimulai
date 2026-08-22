@@ -76,11 +76,13 @@ func SetupIsolatedSchemaTest(t *testing.T) *TestDB {
 	}
 
 	// 5. Run Migrations
-	// Get all migrations (Framework + Registered)
-	migrations := dim.GetFrameworkMigrations()
-	migrations = append(migrations, dim.GetRegisteredMigrations()...)
-
-	if err := dim.RunMigrations(scopedDB, migrations); err != nil {
+	// GetAllMigrations menggabungkan migrasi framework dan migrasi aplikasi lalu
+	// mengurutkannya berdasarkan Version. Menyambung sendiri dengan
+	// append(GetFrameworkMigrations(), GetRegisteredMigrations()...) membuat urutan
+	// jalannya mengikuti urutan init() package — yang menggigit begitu migrasi
+	// tersebar ke lebih dari satu package, dan hanya terlihat pada skema yang
+	// dibangun dari nol seperti di sini.
+	if err := dim.RunMigrations(scopedDB, dim.GetAllMigrations()); err != nil {
 		scopedDB.Close()
 		cleanupSchema(cfg, schema)
 		t.Fatalf("Failed to run migrations in isolated schema %s: %v", schema, err)
